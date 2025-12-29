@@ -33,6 +33,7 @@ src/main/java/com/project/
 - ✅ **Message Queues** - RabbitMQ for tasks, Kafka for events
 - ✅ **Connection Pooling** - HikariCP optimized
 - ✅ **Database Migrations** - Flyway versioned migrations
+- ✅ **API Documentation** - Interactive Swagger UI with OpenAPI 3.0
 - ✅ **Kubernetes Ready** - Health probes, graceful shutdown, HPA
 
 ## Prerequisites
@@ -108,6 +109,8 @@ After `docker-compose up`, the following services are available:
 | Service   | URL                          | Credentials        |
 |-----------|------------------------------|--------------------|
 | API       | http://localhost:8080        | -                  |
+| Swagger UI| http://localhost:8080/swagger-ui.html | -         |
+| OpenAPI Docs | http://localhost:8080/v3/api-docs | -           |
 | PostgreSQL| localhost:5432               | postgres/dev_password |
 | Redis     | localhost:6379               | No auth            |
 | RabbitMQ UI | http://localhost:15672      | guest/guest        |

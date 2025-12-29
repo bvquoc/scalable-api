@@ -7,6 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class ScalableApiApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ScalableApiApplication.java, args);
+        SpringApplication.run(ScalableApiApplication.class, args);
     }
 }

@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    # Testcontainers will override these at runtime
+    url: jdbc:tc:postgresql:16:///testdb
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Use Flyway migrations
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    enabled: true  # Enable Flyway for tests
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # RabbitMQ - Testcontainers will override
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  # Kafka - Testcontainers will override
+  kafka:
+    bootstrap-servers: localhost:9092
+
+logging:
+  level:
+    com.project: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.testcontainers: INFO

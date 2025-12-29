@@ -1,0 +1,134 @@
+package com.project.messaging;
+
+import com.project.config.RabbitMQConfig;
+import com.project.messaging.dto.OrderProcessingMessage;
+import com.project.messaging.producer.RabbitMQProducer;
+import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static java.time.Duration.ofSeconds;
+
+/**
+ * Integration tests for RabbitMQ messaging.
+ * Tests message production and consumption with real RabbitMQ instance.
+ */
+@SpringBootTest
+@Testcontainers
+@ActiveProfiles("test")
+class RabbitMQIntegrationTest {
+
+    @Container
+    static RabbitMQContainer rabbitMQ = new RabbitMQContainer("rabbitmq:3.13-alpine")
+            .withReuse(true);
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.rabbitmq.host", rabbitMQ::getHost);
+        registry.add("spring.rabbitmq.port", rabbitMQ::getAmqpPort);
+        registry.add("spring.rabbitmq.username", rabbitMQ::getAdminUsername);
+        registry.add("spring.rabbitmq.password", rabbitMQ::getAdminPassword);
+    }
+
+    @Autowired
+    private RabbitMQProducer rabbitMQProducer;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Test
+    void shouldSendOrderProcessingTask() {
+        // Given
+        OrderProcessingMessage message = new OrderProcessingMessage(
+            1L,
+            "ORD-001",
+            100L,
+            new BigDecimal("99.99"),
+            "123 Test St",
+            LocalDateTime.now()
+        );
+
+        // When
+        rabbitMQProducer.sendOrderProcessingTask(message);
+
+        // Then - Message should be in queue
+        await().atMost(ofSeconds(5)).untilAsserted(() -> {
+            Long messageCount = rabbitTemplate.execute(channel -> {
+                return channel.messageCount(RabbitMQConfig.ORDER_PROCESSING_QUEUE);
+            });
+            assertThat(messageCount).isGreaterThan(0L);
+        });
+    }
+
+    @Test
+    void shouldSendEmailNotificationTask() {
+        // Given
+        String recipient = "test@example.com";
+        String subject = "Test Email";
+        String body = "This is a test email";
+
+        // When
+        rabbitMQProducer.sendEmailNotificationTask(recipient, subject, body);
+
+        // Then - Message should be in queue
+        await().atMost(ofSeconds(5)).untilAsserted(() -> {
+            Long messageCount = rabbitTemplate.execute(channel -> {
+                return channel.messageCount(RabbitMQConfig.EMAIL_NOTIFICATION_QUEUE);
+            });
+            assertThat(messageCount).isGreaterThan(0L);
+        });
+    }
+
+    @Test
+    void shouldSendReportGenerationTask() {
+        // Given
+        String reportType = "SALES_REPORT";
+        Long userId = 100L;
+        String parameters = "{\"startDate\":\"2025-01-01\",\"endDate\":\"2025-01-31\"}";
+
+        // When
+        rabbitMQProducer.sendReportGenerationTask(reportType, userId, parameters);
+
+        // Then - Message should be in queue
+        await().atMost(ofSeconds(5)).untilAsserted(() -> {
+            Long messageCount = rabbitTemplate.execute(channel -> {
+                return channel.messageCount(RabbitMQConfig.REPORT_GENERATION_QUEUE);
+            });
+            assertThat(messageCount).isGreaterThan(0L);
+        });
+    }
+
+    @Test
+    void shouldHaveDurableQueues() {
+        // Verify queues are durable (persist across restarts)
+        Boolean isOrderQueueDurable = rabbitTemplate.execute(channel -> {
+            var queueInfo = channel.queueDeclarePassive(RabbitMQConfig.ORDER_PROCESSING_QUEUE);
+            return queueInfo != null;
+        });
+        assertThat(isOrderQueueDurable).isTrue();
+
+        Boolean isEmailQueueDurable = rabbitTemplate.execute(channel -> {
+            var queueInfo = channel.queueDeclarePassive(RabbitMQConfig.EMAIL_NOTIFICATION_QUEUE);
+            return queueInfo != null;
+        });
+        assertThat(isEmailQueueDurable).isTrue();
+
+        Boolean isReportQueueDurable = rabbitTemplate.execute(channel -> {
+            var queueInfo = channel.queueDeclarePassive(RabbitMQConfig.REPORT_GENERATION_QUEUE);
+            return queueInfo != null;
+        });
+        assertThat(isReportQueueDurable).isTrue();
+    }
+}

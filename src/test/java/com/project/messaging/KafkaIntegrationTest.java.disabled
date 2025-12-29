@@ -1,0 +1,188 @@
+package com.project.messaging;
+
+import com.project.config.KafkaConfig;
+import com.project.messaging.dto.OrderEvent;
+import com.project.messaging.producer.KafkaProducer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+/**
+ * Integration tests for Kafka messaging.
+ * Tests event production and consumption with real Kafka instance.
+ */
+@SpringBootTest
+@Testcontainers
+@ActiveProfiles("test")
+class KafkaIntegrationTest {
+
+    @Container
+    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
+            .withReuse(true);
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+    }
+
+    @Autowired
+    private KafkaProducer kafkaProducer;
+
+    private KafkaConsumer<String, Object> testConsumer;
+
+    @BeforeEach
+    void setUp() {
+        // Create test consumer
+        Map<String, Object> config = new HashMap<>();
+        config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        config.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group");
+        config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "java.util.LinkedHashMap");
+
+        testConsumer = new KafkaConsumer<>(config);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (testConsumer != null) {
+            testConsumer.close();
+        }
+    }
+
+    @Test
+    void shouldPublishOrderEvent() {
+        // Given
+        testConsumer.subscribe(Collections.singletonList(KafkaConfig.ORDER_EVENTS_TOPIC));
+
+        OrderEvent event = new OrderEvent(
+            "CREATED",
+            1L,
+            "ORD-001",
+            100L,
+            new BigDecimal("99.99"),
+            "PENDING"
+        );
+
+        // When
+        kafkaProducer.publishOrderEvent(event);
+
+        // Then - Event should be consumed
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ConsumerRecords<String, Object> records = testConsumer.poll(Duration.ofMillis(1000));
+            assertThat(records).isNotEmpty();
+
+            ConsumerRecord<String, Object> record = records.iterator().next();
+            assertThat(record.key()).isEqualTo("ORD-001");
+
+            Map<String, Object> eventMap = (Map<String, Object>) record.value();
+            assertThat(eventMap.get("eventType")).isEqualTo("CREATED");
+            assertThat(eventMap.get("orderId")).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void shouldPublishUserEvent() {
+        // Given
+        testConsumer.subscribe(Collections.singletonList(KafkaConfig.USER_EVENTS_TOPIC));
+
+        Long userId = 100L;
+        String action = "LOGIN";
+        String details = "User logged in from web browser";
+
+        // When
+        kafkaProducer.publishUserEvent(userId, action, details);
+
+        // Then - Event should be consumed
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ConsumerRecords<String, Object> records = testConsumer.poll(Duration.ofMillis(1000));
+            assertThat(records).isNotEmpty();
+
+            ConsumerRecord<String, Object> record = records.iterator().next();
+            assertThat(record.key()).isEqualTo(userId.toString());
+
+            Map<String, Object> eventMap = (Map<String, Object>) record.value();
+            assertThat(eventMap.get("userId")).isEqualTo(100);
+            assertThat(eventMap.get("action")).isEqualTo("LOGIN");
+        });
+    }
+
+    @Test
+    void shouldPublishInventoryEvent() {
+        // Given
+        testConsumer.subscribe(Collections.singletonList(KafkaConfig.INVENTORY_EVENTS_TOPIC));
+
+        Long productId = 50L;
+        String sku = "PROD-001";
+        Integer oldStock = 100;
+        Integer newStock = 85;
+
+        // When
+        kafkaProducer.publishInventoryEvent(productId, sku, oldStock, newStock);
+
+        // Then - Event should be consumed
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ConsumerRecords<String, Object> records = testConsumer.poll(Duration.ofMillis(1000));
+            assertThat(records).isNotEmpty();
+
+            ConsumerRecord<String, Object> record = records.iterator().next();
+            assertThat(record.key()).isEqualTo(sku);
+
+            Map<String, Object> eventMap = (Map<String, Object>) record.value();
+            assertThat(eventMap.get("productId")).isEqualTo(50);
+            assertThat(eventMap.get("oldStock")).isEqualTo(100);
+            assertThat(eventMap.get("newStock")).isEqualTo(85);
+        });
+    }
+
+    @Test
+    void shouldPublishSystemEvent() {
+        // Given
+        testConsumer.subscribe(Collections.singletonList(KafkaConfig.SYSTEM_EVENTS_TOPIC));
+
+        String level = "ERROR";
+        String message = "Database connection failed";
+        String details = "Connection timeout after 30 seconds";
+
+        // When
+        kafkaProducer.publishSystemEvent(level, message, details);
+
+        // Then - Event should be consumed
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ConsumerRecords<String, Object> records = testConsumer.poll(Duration.ofMillis(1000));
+            assertThat(records).isNotEmpty();
+
+            ConsumerRecord<String, Object> record = records.iterator().next();
+            assertThat(record.key()).isEqualTo(level);
+
+            Map<String, Object> eventMap = (Map<String, Object>) record.value();
+            assertThat(eventMap.get("level")).isEqualTo("ERROR");
+            assertThat(eventMap.get("message")).isEqualTo("Database connection failed");
+        });
+    }
+}

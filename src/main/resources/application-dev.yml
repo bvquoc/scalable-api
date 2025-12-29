@@ -15,7 +15,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: validate  # Validate schema against entities (Flyway handles migrations)
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -47,7 +47,7 @@ spring:
     bootstrap-servers: localhost:9092
 
   flyway:
-    enabled: true
+    enabled: true  # Flyway manages database schema migrations
     baseline-on-migrate: true
     locations: classpath:db/migration
     validate-on-migrate: true
