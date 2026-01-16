@@ -43,6 +43,7 @@ public class KafkaConfig {
     public static final String ORDER_EVENTS_TOPIC = "order.events";
     public static final String INVENTORY_EVENTS_TOPIC = "inventory.events";
     public static final String SYSTEM_EVENTS_TOPIC = "system.events";
+    public static final String ANALYTICS_EVENTS_TOPIC = "analytics.events";
 
     /**
      * Producer configuration.

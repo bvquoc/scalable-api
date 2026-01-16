@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "scalable-api-monitor"
+
+scrape_configs:
+  # Spring Boot Actuator metrics
+  - job_name: "scalable-api"
+    metrics_path: "/actuator/prometheus"
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          application: "scalable-api"
+          environment: "local"

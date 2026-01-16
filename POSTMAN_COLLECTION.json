@@ -1,0 +1,233 @@
+{
+  "info": {
+    "name": "Scalable Spring Boot API - Demo",
+    "description": "Postman collection for testing demo use cases: Orders, Users, Products, Analytics",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8080", "type": "string"},
+    {"key": "apiKey", "value": "test-api-key-local-dev", "type": "string"}
+  ],
+  "item": [
+    {
+      "name": "Analytics Events",
+      "item": [
+        {
+          "name": "Log Page View Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{apiKey}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user-123\",\n  \"eventType\": \"PAGE_VIEW\",\n  \"properties\": {\n    \"page\": \"/home\",\n    \"referrer\": \"google\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/events"
+          }
+        },
+        {
+          "name": "Get Analytics Summary",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/analytics/summary"
+          }
+        },
+        {
+          "name": "Get Analytics Summary for Date",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/summary?date=2026-01-16",
+              "query": [{"key": "date", "value": "2026-01-16"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{apiKey}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"totalAmount\": 109.97,\n  \"shippingAddress\": \"123 Main St, City, State 12345\"\n}"
+            },
+            "url": "{{baseUrl}}/api/orders"
+          }
+        },
+        {
+          "name": "Get Order by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/orders/1"
+          }
+        },
+        {
+          "name": "Get Order by Order Number",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/orders/number/ORD-12345"
+          }
+        },
+        {
+          "name": "Get Orders by User",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/user/1?page=0&size=20",
+              "query": [{"key": "page", "value": "0"}, {"key": "size", "value": "20"}]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/1/status?status=PROCESSING",
+              "query": [{"key": "status", "value": "PROCESSING"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{apiKey}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"username\": \"newuser\",\n  \"fullName\": \"New User\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/users/1"
+          }
+        },
+        {
+          "name": "List Active Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/users"
+          }
+        },
+        {
+          "name": "Search Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/search?q=test",
+              "query": [{"key": "q", "value": "test"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-API-Key", "value": "{{apiKey}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wireless Mouse\",\n  \"description\": \"Ergonomic wireless mouse\",\n  \"sku\": \"WM-001\",\n  \"price\": 29.99,\n  \"stockQuantity\": 100,\n  \"category\": \"Electronics\"\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": "{{baseUrl}}/api/products/1"
+          }
+        },
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?page=0&size=20",
+              "query": [{"key": "page", "value": "0"}, {"key": "size", "value": "20"}]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-API-Key", "value": "{{apiKey}}"}],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/search?q=mouse",
+              "query": [{"key": "q", "value": "mouse"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health & Actuator",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/health"
+          }
+        },
+        {
+          "name": "Application Info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/info"
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/actuator/prometheus"
+          }
+        }
+      ]
+    }
+  ]
+}

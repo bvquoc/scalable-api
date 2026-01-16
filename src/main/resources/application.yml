@@ -30,11 +30,21 @@ management:
       base-path: /actuator
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: ALWAYS
+  info:
+    env:
+      enabled: true
   metrics:
     export:
       prometheus:
         enabled: true
+
+# Application info for /actuator/info endpoint
+info:
+  application:
+    name: Scalable API
+    version: 1.0.0
+    description: Spring Boot API with Redis caching and rate limiting
 
 logging:
   level:

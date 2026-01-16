@@ -1,6 +1,7 @@
 package com.project.messaging.producer;
 
 import com.project.config.KafkaConfig;
+import com.project.messaging.dto.AnalyticsEvent;
 import com.project.messaging.dto.OrderEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +125,31 @@ public class KafkaProducer {
 
         } catch (Exception e) {
             log.error("Failed to publish system event: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Publish analytics event for real-time aggregation.
+     * Used for high-throughput event logging (fire-and-forget).
+     *
+     * @param event Analytics event
+     */
+    public void sendAnalyticsEvent(AnalyticsEvent event) {
+        try {
+            CompletableFuture<SendResult<String, Object>> future =
+                kafkaTemplate.send(KafkaConfig.ANALYTICS_EVENTS_TOPIC, event.getUserId(), event);
+
+            future.whenComplete((result, ex) -> {
+                if (ex == null) {
+                    log.debug("Published analytics event: eventId={}, eventType={}, userId={}",
+                        event.getEventId(), event.getEventType(), event.getUserId());
+                } else {
+                    log.warn("Failed to publish analytics event: {}", ex.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+            log.error("Failed to send analytics event: {}", e.getMessage(), e);
         }
     }
 

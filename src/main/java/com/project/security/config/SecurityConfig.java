@@ -19,7 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 2. RateLimitFilter - Check rate limits
  * 3. Authorization - Require authentication for protected endpoints
  *
- * Public endpoints: /actuator/health, /actuator/info, /swagger-ui/**, /v3/api-docs/**
+ * Public endpoints: /actuator/health, /actuator/info, /actuator/metrics, /actuator/prometheus, /swagger-ui/**, /v3/api-docs/**
  * Protected endpoints: All others require valid API key
  */
 @Configuration
@@ -49,8 +49,14 @@ public class SecurityConfig {
 
             // Authorization rules
             .authorizeHttpRequests(authz -> authz
-                // Public endpoints
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                // Public actuator endpoints (for monitoring and health checks)
+                .requestMatchers(
+                    "/actuator/health",
+                    "/actuator/info",
+                    "/actuator/metrics",
+                    "/actuator/metrics/**",
+                    "/actuator/prometheus"
+                ).permitAll()
 
                 // Swagger UI and OpenAPI endpoints (public for documentation access)
                 .requestMatchers(

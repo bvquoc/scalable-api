@@ -30,6 +30,8 @@ src/main/java/com/project/
 - ✅ **Redis Caching** - 90%+ cache hit rate target
 - ✅ **API Key Authentication** - SHA-256 hashing with Redis cache
 - ✅ **Distributed Rate Limiting** - Multi-tier (BASIC, STANDARD, PREMIUM)
+- ✅ **Analytics Event Logging** - Kafka async processing, 10,000+ events/sec (NEW - Phase 8)
+- ✅ **Real-Time Analytics** - Redis aggregation with 90-day retention (NEW - Phase 8)
 - ✅ **Message Queues** - RabbitMQ for tasks, Kafka for events
 - ✅ **Connection Pooling** - HikariCP optimized
 - ✅ **Database Migrations** - Flyway versioned migrations
@@ -106,15 +108,15 @@ curl http://localhost:8080/actuator/info
 
 After `docker-compose up`, the following services are available:
 
-| Service   | URL                          | Credentials        |
-|-----------|------------------------------|--------------------|
-| API       | http://localhost:8080        | -                  |
-| Swagger UI| http://localhost:8080/swagger-ui.html | -         |
-| OpenAPI Docs | http://localhost:8080/v3/api-docs | -           |
-| PostgreSQL| localhost:5432               | postgres/dev_password |
-| Redis     | localhost:6379               | No auth            |
-| RabbitMQ UI | http://localhost:15672      | guest/guest        |
-| Kafka     | localhost:9092               | No auth            |
+| Service      | URL                                   | Credentials           |
+| ------------ | ------------------------------------- | --------------------- |
+| API          | http://localhost:8080                 | -                     |
+| Swagger UI   | http://localhost:8080/swagger-ui.html | -                     |
+| OpenAPI Docs | http://localhost:8080/v3/api-docs     | -                     |
+| PostgreSQL   | localhost:5432                        | postgres/dev_password |
+| Redis        | localhost:6379                        | No auth               |
+| RabbitMQ UI  | http://localhost:15672                | guest/guest           |
+| Kafka        | localhost:9092                        | No auth               |
 
 ## Environment Profiles
 
@@ -197,6 +199,64 @@ mvn flyway:migrate
 mvn flyway:clean
 ```
 
+## API Key Authentication
+
+The API uses API key authentication for all protected endpoints. API keys must be sent in the `X-API-Key` header.
+
+### Getting an API Key for Local Testing
+
+After running the application, the seed data migration (`V3__seed_data.sql`) automatically creates a test user and API key:
+
+**Test API Key:**
+
+```
+test-api-key-local-dev
+```
+
+**Test User:**
+
+- Email: `test@example.com`
+- Username: `testuser`
+
+**Rate Limit Tier:** PREMIUM (1000 requests/minute)
+
+### Using the API Key
+
+Include the API key in the `X-API-Key` header for all API requests:
+
+```bash
+curl -H "X-API-Key: test-api-key-local-dev" \
+     http://localhost:8080/api/users
+```
+
+### Rate Limit Tiers
+
+- **BASIC**: 60 requests/minute
+- **STANDARD**: 300 requests/minute
+- **PREMIUM**: 1000 requests/minute
+- **UNLIMITED**: No rate limit
+
+### Public Endpoints
+
+The following endpoints do not require authentication:
+
+**Actuator Endpoints (Monitoring):**
+
+- `/actuator/health` - Health check (liveness/readiness probes)
+- `/actuator/info` - Application information
+- `/actuator/metrics` - Application metrics (all metrics)
+- `/actuator/metrics/{metricName}` - Specific metric details
+- `/actuator/prometheus` - Prometheus-formatted metrics (for scraping)
+
+**Documentation Endpoints:**
+
+- `/swagger-ui.html` - Swagger UI interface
+- `/swagger-ui/**` - Swagger UI resources
+- `/v3/api-docs` - OpenAPI 3.0 specification
+- `/v3/api-docs/**` - OpenAPI resources
+
+**Note:** All other endpoints (e.g., `/api/**`) require a valid API key in the `X-API-Key` header.
+
 ## Testing
 
 ### Run All Tests
@@ -256,17 +316,87 @@ kubectl get svc
 - `/actuator/metrics` - Application metrics
 - `/actuator/prometheus` - Prometheus-formatted metrics
 
-### Prometheus + Grafana
+### Prometheus + Grafana Monitoring Stack
 
-Start monitoring stack:
+The project includes a complete monitoring setup with Prometheus for metrics collection and Grafana for visualization.
+
+#### Prerequisites
+
+1. **Start the main application services:**
+
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **Start your Spring Boot application:**
+
+   ```bash
+   mvn spring-boot:run
+   ```
+
+   The application must be running on `http://localhost:8080` for Prometheus to scrape metrics.
+
+#### Start Monitoring Stack
 
 ```bash
 docker-compose -f docker-compose-monitoring.yml up -d
 ```
 
-Access:
+#### Access Monitoring UIs
+
 - **Prometheus:** http://localhost:9090
-- **Grafana:** http://localhost:3000 (admin/admin)
+
+  - View metrics, run queries, and check targets
+  - Example query: `rate(http_server_requests_seconds_count[5m])`
+
+- **Grafana:** http://localhost:3000
+  - **Username:** `admin`
+  - **Password:** `admin` (change on first login)
+  - Pre-configured dashboard: "Spring Boot Metrics"
+  - Pre-configured Prometheus datasource
+
+#### What's Monitored
+
+The Grafana dashboard includes:
+
+- **HTTP Metrics:**
+
+  - Request rate (requests/second)
+  - Request duration (p95 latency)
+  - HTTP status codes (2xx, 4xx, 5xx)
+
+- **JVM Metrics:**
+
+  - Memory usage (heap and non-heap)
+  - Thread count
+  - Garbage collection
+
+- **Database Metrics:**
+  - HikariCP connection pool (active/idle connections)
+
+#### Verify Prometheus is Scraping
+
+1. Open http://localhost:9090
+2. Go to **Status → Targets**
+3. Check that `scalable-api` target is **UP** (green)
+
+If the target shows as **DOWN**, verify:
+
+- Your Spring Boot app is running on `http://localhost:8080`
+- The `/actuator/prometheus` endpoint is accessible
+- On Linux, you may need to add `extra_hosts: - "host.docker.internal:host-gateway"` to Prometheus service
+
+#### Stop Monitoring Stack
+
+```bash
+docker-compose -f docker-compose-monitoring.yml down
+```
+
+To remove all data:
+
+```bash
+docker-compose -f docker-compose-monitoring.yml down -v
+```
 
 ## Troubleshooting
 
