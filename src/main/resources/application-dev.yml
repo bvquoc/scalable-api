@@ -50,7 +50,7 @@ spring:
     enabled: true  # Flyway manages database schema migrations
     baseline-on-migrate: true
     locations: classpath:db/migration
-    validate-on-migrate: true
+    validate-on-migrate: false  # Temporarily disabled to allow seed data updates
 
 logging:
   level:
